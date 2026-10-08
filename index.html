@@ -96,7 +96,7 @@ input::placeholder{color:#8E87A8}
 <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
 <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
 <p style="margin: 0; font-size: 14px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #3DFF9A">Tu búsqueda · {{ summary }}</p>
-<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 40px; letter-spacing: -1px">Los 3 paquetes que más coinciden con vos</h2>
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 40px; letter-spacing: -1px">{{ resultsTitle }}</h2>
 </div>
 <button type="button" onClick="{{ reset }}" style="min-height: 44px; padding: 0 20px; background: transparent; border: 1px solid #2E2650; border-radius: 999px; color: #F4F1FA; font-size: 15px; cursor: pointer">Cerrar resultados</button>
 </div>
@@ -113,7 +113,7 @@ input::placeholder{color:#8E87A8}
 <div style="height: 8px; background: #2E2650; border-radius: 999px; overflow: hidden"><div style="{{ r.barStyle }}"></div></div>
 <div style="display: flex; flex-direction: column; gap: 4px">
 <h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 28px; line-height: 1.15">{{ r.destino }}</h3>
-<p style="margin: 0; font-size: 15px; color: #B7B0CC">{{ r.noches }} noches · {{ r.cuando }}</p>
+<p style="margin: 0; font-size: 15px; color: #B7B0CC"><b style="color: #F4F1FA">{{ r.variant }}</b> · {{ r.noches }} noches · {{ r.cuando }}</p>
 </div>
 <ul style="margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; line-height: 1.4; color: #B7B0CC">
 <li>{{ r.vuelo }}</li>
@@ -660,24 +660,86 @@ class Component extends DCLogic {
     });
     scored.sort(function (x, y) { return y.score - x.score || x.precio - y.precio; });
 
+    // Cómo se arma cada destino (datos inventados para la demo)
+    var COMP = {
+      'Bariloche': { t: [['Vuelo Aerolíneas Argentinas', 320000], ['Vuelo JetSMART', 235000], ['Bus cama Plusmar', 150000]], s: [['Cabaña Airbnb con vista al lago', 60000], ['Hostel en el centro', 25000], ['Hotel 4★ frente al Nahuel Huapi', 115000]], e: [['Circuito Chico', 35000], ['Navegación a Isla Victoria', 85000]] },
+      'Mendoza': { t: [['Vuelo Aerolíneas Argentinas', 300000], ['Vuelo Flybondi', 215000], ['Bus cama Andesmar', 140000]], s: [['Posada en Chacras de Coria', 70000], ['Hostel en el centro', 24000], ['Lodge entre viñedos', 140000]], e: [['Tour de bodegas en Luján', 45000], ['Cabalgata al atardecer', 60000]] },
+      'Cataratas del Iguazú': { t: [['Vuelo Aerolíneas Argentinas', 340000], ['Vuelo Flybondi', 245000], ['Bus cama Crucero del Norte', 160000]], s: [['Hotel con pileta en Puerto Iguazú', 60000], ['Hostel con pileta', 26000], ['Lodge en la selva', 130000]], e: [['Entradas al Parque Nacional', 45000], ['Gran Aventura en lancha', 70000]] },
+      'Salta y Jujuy': { t: [['Vuelo Aerolíneas Argentinas', 290000], ['Vuelo JetSMART', 200000], ['Bus cama Flecha Bus', 145000]], s: [['Hostal boutique en Salta', 38000], ['Hostel en el centro', 20000], ['Finca boutique en Cafayate', 110000]], e: [['Excursión a Purmamarca', 40000], ['Salinas Grandes', 55000]] },
+      'Mar del Plata': { t: [['Bus Plusmar ejecutivo', 90000], ['Bus Flecha Bus', 70000], ['Vuelo Aerolíneas Argentinas', 180000]], s: [['Departamento a 2 cuadras del mar', 40000], ['Hostel en Playa Grande', 18000], ['Hotel frente al mar', 85000]], e: [['Entradas al Aquarium', 30000], ['Paseo en barco por el puerto', 25000]] },
+      'Colonia del Sacramento': { t: [['Ferry Buquebus', 140000], ['Ferry Colonia Express', 105000], ['Bus + ferry económico', 85000]], s: [['Posada en el casco histórico', 55000], ['Hostel en el Barrio Histórico', 22000], ['Hotel boutique sobre el río', 110000]], e: [['Alquiler de bici', 15000], ['Bodega con degustación', 45000]] },
+      'Punta del Este': { t: [['Buquebus + bus a Punta', 160000], ['Colonia Express + bus', 125000], ['Bus + ferry económico', 100000]], s: [['Hotel frente al mar', 120000], ['Airbnb en La Barra', 70000], ['Resort en José Ignacio', 220000]], e: [['Cena en José Ignacio', 60000], ['Paseo a Isla Gorriti', 40000]] },
+      'Montevideo': { t: [['Vuelo Aerolíneas Argentinas', 210000], ['Ferry Colonia Express + bus', 120000], ['Bus + ferry económico', 90000]], s: [['Hotel en Pocitos', 75000], ['Hostel en Ciudad Vieja', 24000], ['Hotel boutique en Carrasco', 140000]], e: [['Tour por la Ciudad Vieja', 25000], ['Mercado del Puerto con almuerzo', 40000]] },
+      'Florianópolis': { t: [['Vuelo directo Aerolíneas', 420000], ['Vuelo GOL con escala', 330000], ['Bus internacional', 200000]], s: [['Airbnb cerca de la playa', 50000], ['Hostel en Barra da Lagoa', 28000], ['Pousada frente al mar', 115000]], e: [['Clase de surf', 40000], ['Barco a Ilha do Campeche', 60000]] },
+      'Gramado y Canela': { t: [['Vuelo Aerolíneas a Porto Alegre + traslado', 400000], ['Vuelo GOL + bus a Gramado', 320000], ['Bus internacional', 210000]], s: [['Hotel boutique en la sierra', 85000], ['Posada en Canela', 45000], ['Hotel de montaña con spa', 160000]], e: [['Paseo por Canela', 30000], ['Natal Luz', 70000]] },
+      'Porto Alegre': { t: [['Vuelo directo Aerolíneas', 360000], ['Vuelo GOL', 280000], ['Bus internacional', 190000]], s: [['Hotel cerca del centro de convenciones', 70000], ['Hostel en Cidade Baixa', 26000], ['Hotel ejecutivo premium', 130000]], e: [['Atardecer en el Guaíba', 20000], ['City tour', 30000]] },
+      'Balneário Camboriú': { t: [['Bus internacional cama', 220000], ['Vuelo GOL a Navegantes', 300000], ['Bus internacional semicama', 170000]], s: [['Departamento frente al mar', 55000], ['Hostel céntrico', 24000], ['Hotel con vista a la bahía', 120000]], e: [['Parque temático', 50000], ['Teleférico Unipraias', 35000]] }
+    };
+    var AFF = { mochilero: { ahorro: 6, mochi: 9 }, pareja: { exp: 7, reco: 2 }, familia: { reco: 6, exp: 3 }, negocios: { reco: 7 }, eventos: { reco: 5, ahorro: 2 } };
     var fmtDate = function (d) { return d.getDate() + ' ' + MESES[d.getMonth()]; };
     var cuando = ida && vuelta && vuelta > ida ? fmtDate(ida) + ' – ' + fmtDate(vuelta) : (ida ? 'desde el ' + fmtDate(ida) : 'fechas flexibles');
 
-    var results = scored.slice(0, 3).map(function (r, i) {
+    var scoreParts = function (p, precio) {
+      var sc = 0, reasons = [];
+      if (anyDest) { sc += 22; } else if (matchesDest(p)) { sc += 40; reasons.push({ text: '✓ Destino', style: tagOk }); }
+      if (budget > 0) {
+        if (precio <= budget) { sc += 30; reasons.push({ text: '✓ Dentro del presupuesto', style: tagOk }); }
+        else { sc += Math.max(0, 30 * (1 - ((precio - budget) / budget) * 2)); reasons.push({ text: 'Excede ARS ' + money(precio - budget), style: tagNo }); }
+      } else { sc += 18; }
+      if (mes) {
+        if (p.meses.indexOf(mes) >= 0) { sc += 15; reasons.push({ text: '✓ Buena época', style: tagOk }); }
+        else { sc += 4; reasons.push({ text: 'Temporada baja', style: tagNo }); }
+      } else { sc += 9; }
+      if (p.perf.indexOf(st.picked) >= 0) { sc += 12; reasons.push({ text: '✓ Ideal para tu perfil', style: tagOk }); }
+      return { sc: sc, reasons: reasons };
+    };
+
+    var cards = [];
+    var resultsTitle = 'Los 3 paquetes que más coinciden con vos';
+    if (!anyDest && hayDest) {
+      // Un solo destino: el que mejor coincide, armado de 3 formas distintas
+      var bestP = scored.filter(function (r) { return r.dm; })[0].p;
+      var c = COMP[bestP.d];
+      var V = [
+        { id: 'reco', name: 'Recomendado', t: c.t[0], s: c.s[0], m: ['Uber', 25000], acts: [c.e[0]] },
+        { id: 'ahorro', name: 'Más económico', t: c.t[1], s: c.s[1], m: ['Cabify', 20000], acts: [c.e[0]] },
+        st.picked === 'mochilero'
+          ? { id: 'mochi', name: 'Modo mochilero', t: c.t[2], s: c.s[1], m: ['Transporte público', 8000], acts: [['Free walking tour', 0]] }
+          : { id: 'exp', name: 'Más experiencias', t: c.t[0], s: c.s[2], m: ['Traslado privado', 45000], acts: [c.e[0], c.e[1]] }
+      ];
+      var prices = V.map(function (v) { return v.t[1] + v.s[1] * noches + v.m[1] + v.acts.reduce(function (a, x) { return a + x[1]; }, 0); });
+      var minPrice = Math.min.apply(null, prices);
+      V.forEach(function (v, k) {
+        var sp = scoreParts(bestP, prices[k]);
+        var bonus = (AFF[st.picked] || {})[v.id] || 0;
+        if (prices[k] === minPrice) sp.reasons.push({ text: '✓ Mejor precio', style: tagOk });
+        cards.push({ p: bestP, variant: v.name, precio: prices[k], score: Math.min(98, Math.round(sp.sc + bonus)), reasons: sp.reasons,
+          vuelo: v.t[0], aloja: v.s[0], extra: v.m[0] + ' + ' + v.acts.map(function (a) { return a[0]; }).join(' + ') });
+      });
+      cards.sort(function (x, y) { return y.score - x.score || x.precio - y.precio; });
+      resultsTitle = 'Tres formas de viajar a ' + bestP.d;
+    } else {
+      cards = scored.slice(0, 3).map(function (r) {
+        return { p: r.p, variant: 'Paquete sugerido', precio: r.precio, score: r.score, reasons: r.reasons, vuelo: r.p.v, aloja: r.p.a, extra: r.p.e };
+      });
+    }
+
+    var results = cards.map(function (r, i) {
       var top = i === 0;
-      var c = top ? '#FF3EA5' : '#3DFF9A';
+      var col = top ? '#FF3EA5' : '#3DFF9A';
       return {
-        book: function () { openPay({ title: r.p.d + ', ' + r.p.pais, sub: noches + ' noches · ' + cuando, total: r.precio }); },
+        book: function () { openPay({ title: r.p.d + ' · ' + r.variant, sub: noches + ' noches · ' + cuando, total: r.precio }); },
         rank: i + 1,
         destino: r.p.d,
         pais: r.p.pais,
-        vuelo: r.p.v, aloja: r.p.a, extra: r.p.e,
+        variant: r.variant,
+        vuelo: r.vuelo, aloja: r.aloja, extra: r.extra,
         noches: noches,
         cuando: cuando,
         score: r.score,
         precio: money(r.precio),
         reasons: r.reasons,
-        barStyle: 'height: 100%; width: ' + r.score + '%; background: ' + c + '; border-radius: 999px; box-shadow: 0 0 12px ' + c + ';',
+        barStyle: 'height: 100%; width: ' + r.score + '%; background: ' + col + '; border-radius: 999px; box-shadow: 0 0 12px ' + col + ';',
         badgeStyle: 'padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; ' + (top ? 'background: #FF3EA5; color: #0E0B1A;' : 'background: #2E2650; color: #F4F1FA;'),
         cardStyle: 'flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 16px; padding: 28px; background: #1C1736; border-radius: 24px; ' + (top ? 'border: 2px solid #FF3EA5; box-shadow: 0 0 40px rgba(255,62,165,0.3);' : 'border: 1px solid #2E2650;')
       };
@@ -802,6 +864,7 @@ class Component extends DCLogic {
     var payCuotaText = cu === 1 ? 'En 1 pago de ARS ' + money(payTotalN) : cu + ' cuotas sin interés de ARS ' + money(payTotalN / cu);
 
     return {
+      resultsTitle: resultsTitle,
       payOpen: !!pay,
       payTitle: pay ? pay.title : '',
       paySub: pay ? pay.sub : '',
